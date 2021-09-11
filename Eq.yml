@@ -1,0 +1,14 @@
+package: sarray
+version: 0.0.4.1
+
+authors:    MarcelineVQ
+readme:     README.md
+homepage:   https://github.com/MarcelineVQ/idris2-sarray
+sourceloc:  https://github.com/MarcelineVQ/idris2-sarray.git
+bugtracker: https://github.com/MarcelineVQ/idris2-sarray/issues
+
+license: CC0 (refer to LICENSE file)
+brief:   Immutable Size Indexed Arrays
+
+depends:
+- base
