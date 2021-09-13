@@ -1,7 +1,5 @@
 module Num.Floating
 
--- Probably overzelous with these constraints, this is in service of making
--- working with arrays/matrices easier.
 public export
 interface Fractional ty => Floating ty where
   constructor MkFloating

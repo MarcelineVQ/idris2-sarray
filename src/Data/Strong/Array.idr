@@ -8,7 +8,10 @@ import Data.Zippable
 
 import public Num.Floating
 
-export
+--------------------------------------------------
+
+-- No good reason to hide the constructor just yet, safety can come later on
+public export
 data Array : Nat -> Type -> Type where
   MkArray : (size : Nat) -> (intSize : Int) -> (content : ArrayData a) -> Array size a
 
@@ -27,12 +30,18 @@ intSize (MkArray s intSize' content) = intSize'
 content : Array s a -> ArrayData a
 content (MkArray s intSize c) = c
 
+--------------------------------------------------
+
 export
 newArray : (s : Nat) -> (def : a) -> Array s a
 newArray s x = unsafePerformIO $ do
     let intsize = cast s
     pure (MkArray s intsize !(primIO (prim__newArray intsize x)))
 
+-- Consider relegating new array construction to ST, requiring a 'freeze' to say
+-- we're done making it. This would make the mutable* methods below unneccesary
+-- and we could remove them from public facing. I don't want to be that strict
+-- until we have fusion though.
 export
 %inline
 newArray' : {s:_} -> (def : a) -> Array s a
@@ -66,12 +75,17 @@ newArrayCopy (MkArray s i contents) = unsafePerformIO $ do
                      primIO $ prim__arraySet new pos el
                      copyFrom old new $ assert_smaller pos (pos - 1)
 
+--------------------------------------------------
+
 export
+||| This won't always be here
 unsafeMutableWriteArray : HasIO io => Array s a -> (i : Nat) -> a -> io ()
 unsafeMutableWriteArray arr i x = primIO (prim__arraySet (content arr) (cast i) x)
 
+-- Consider an interface based on Int and So as an alternative.
 export
 %inline
+||| This won't always be here
 mutableWriteArray : HasIO io => Array s a -> (i : Nat) -> (0 prf : LTE i s) => a -> io ()
 mutableWriteArray arr i x = unsafeMutableWriteArray arr i x
 
@@ -91,6 +105,7 @@ export
 writeArray : Array s a -> (i : Nat) -> (0 prf : LTE i s) => a -> Array s a
 writeArray arr i x = unsafeWriteArray arr i x
 
+--------------------------------------------------
 
 export
 ||| To match with unsafeMutableWriteArray in that it has io for
@@ -114,11 +129,15 @@ export
 readArray : Array s a -> (i : Nat) -> (0 prf : LTE i s) => a
 readArray arr i = unsafeReadArray arr i
 
+--------------------------------------------------
+
 export
+||| Same caveat as writeArray
 modifyArray : (a -> a) -> Array s a -> (i : Nat) -> LTE i s => Array s a
 modifyArray f arr i = writeArray arr i (f (readArray arr i))
 
--- keeping this around for now
+-- Keeping this around for now, Applicative version does the same job, but I'm
+-- a little unsure about how I've written its `go`
 export
 imapArrayM' : Monad m => ((i : Nat) -> a -> m b) -> Array s a -> m (Array s b)
 imapArrayM' f arr = case arr of
@@ -168,27 +187,8 @@ export
 inewArrayFill : (s : Nat) -> ((i : Nat) -> a) -> Array s a
 inewArrayFill s g = runIdentity $ imapArrayM (\i,_ => Id (g i)) (newUnintializedArray {a} s)
 
-
 -- this isn't really foldl, it's foldr but just reading the array in reverse, this should
 -- be changed in the future so it's not surprising.
-export
-foldlArray : (b -> a -> b) -> b -> Array s a -> b
-foldlArray f acc arr = case arr of
-    MkArray s _ _ => let 0 prf = lteReflexive s in go s
-  where
-    go : (i : Nat) -> (0 prf : LTE i s) => b
-    go 0 = acc
-    go (S k) = let 0 p = lteSuccLeft prf in f (go k) (readArray arr k)
-
-export
-foldl2Array : (b -> a -> a -> b) -> b -> Array s a -> Array s a -> b
-foldl2Array f acc arr1 arr2 = case arr1 of
-    MkArray s _ _ => let 0 prf = lteReflexive s in go s
-  where
-    go : (i : Nat) -> (0 prf : LTE i s) => b
-    go 0 = acc
-    go (S k) = let 0 p = lteSuccLeft prf in f (go k) (readArray arr1 k) (readArray arr2 k)
-
 ifoldlArray : (b -> (i : Nat) -> a -> b) -> b -> Array s a -> b
 ifoldlArray f acc arr = case arr of
     MkArray s _ _ => let 0 prf = lteReflexive s in go s
@@ -199,18 +199,28 @@ ifoldlArray f acc arr = case arr of
       let 0 newprf = lteSuccLeft prf
       in f (go k) k (readArray arr k)
 
--- -- this isn't really foldl, it's foldr but just reading the array in reverse, this should
--- -- be changed in the future so it's not surprising.
--- export
--- ifoldlArray : (b -> (i : Nat) -> a -> b) -> b -> Array s a -> b
--- ifoldlArray f acc arr = case arr of
---     MkArray s _ _ => let 0 prf = lteReflexive s in go s
---   where
---     go : (i : Nat) -> (0 prf : LTE i s) => b
---     go 0 = acc
---     go (S k) = let 0 p = lteSuccLeft prf in f (go k) (readArray arr k)
+export
+||| I expect this will dissapear from the api once fusion exists
+ifoldl2Array : (b -> (i1,i2 : Nat) -> a -> a -> b) -> b -> Array s a -> Array s a -> b
+ifoldl2Array f acc arr1 arr2 = case arr1 of
+    MkArray s _ _ => let 0 prf = lteReflexive s in go s
+  where
+    go : (i : Nat) -> (0 prf : LTE i s) => b
+    go 0 = acc
+    go (S k) = let 0 p = lteSuccLeft prf in f (go k) k k (readArray arr1 k) (readArray arr2 k)
 
--- bleh, see note above
+export
+%inline
+foldlArray : (b -> a -> b) -> b -> Array s a -> b
+foldlArray f = ifoldlArray (\acc,_,x => f acc x)
+
+export
+%inline
+||| I expect this will dissapear from the api once fusion exists
+foldl2Array : (b -> a -> a -> b) -> b -> Array s a -> Array s a -> b
+foldl2Array f = ifoldl2Array (\acc,_,_,x,y => f acc x y)
+
+-- bleh, see ifoldlArray note above
 -- exported via Foldable
 %inline
 foldrArray : (a -> b -> b) -> b -> Array s a -> b
@@ -284,17 +294,16 @@ fromList' xs =
 
 export
 Show a => Show (Array s a) where
-  show x = "fromList " ++ show (Array.toList x)
+  showPrec p x = showCon p "fromList" (showArg (Array.toList x))
 
 export
 sumArray : Num a => Array s a -> a
 sumArray = foldlArray (+) 0
 
+-- The quintessential example for where you'd want fusion, but we don't have it yet.
 export
 dotArray : Num a => Array s a -> Array s a -> a
 dotArray a b = sumArray (zipWithArray (*) a b)
-
------------- FromString ------------
 
 ------------ Foldable ------------
 
@@ -325,6 +334,18 @@ export
 Cast a b => Cast (Array s a) (Array s b) where
   cast = mapArray cast
 
+------------ FromString ------------
+
+||| :exec printLn $ the (s ** Array s Char) "abcde"
+||| (5 ** fromList ['a', 'b', 'c', 'd', 'e'])
+||| :exec printLn $ the (s ** Array s Bits8) "abcde"
+||| (5 ** fromList [97, 98, 99, 100, 101])
+||| :exec printLn $ snd $ the (s ** Array s Bits8) "abcde"
+||| fromList [97, 98, 99, 100, 101]
+export
+Cast Char a => FromString (s ** Array s a) where
+  fromString str = let (s ** arr) = fromList' (unpack str) in (s ** cast arr)
+
 ------------ Eq ------------
 
 export
@@ -336,6 +357,7 @@ Eq a => Eq (Array s a) where
 export
 Ord a => Ord (Array s a) where
   compare x y = foldl2Array (\b,x,y => compare x y <+> b) neutral x y
+
 
 --------------------------------------------------
 -- Forcing particular operations into these numerical interfaces makes
