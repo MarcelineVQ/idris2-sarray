@@ -1,6 +1,6 @@
 module Data.Strong.Array
 
-import Data.IOArray.Prims
+import public Data.IOArray.Prims
 import Data.Nat
 
 import Control.Monad.Identity
@@ -382,6 +382,7 @@ export
 div : Integral a => Array s a -> Array s a -> Array s a
 div x y = zipWithArray div x y
 
+export
 %inline
 mod : Integral a => Array s a -> Array s a -> Array s a
 mod x y = zipWithArray mod x y
