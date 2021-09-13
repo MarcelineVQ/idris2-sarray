@@ -4,6 +4,7 @@ import public Data.IOArray.Prims
 import Data.Nat
 
 import Control.Monad.Identity
+import Data.Zippable
 
 import public Num.Floating
 
@@ -188,6 +189,27 @@ foldl2Array f acc arr1 arr2 = case arr1 of
     go 0 = acc
     go (S k) = let 0 p = lteSuccLeft prf in f (go k) (readArray arr1 k) (readArray arr2 k)
 
+ifoldlArray : (b -> (i : Nat) -> a -> b) -> b -> Array s a -> b
+ifoldlArray f acc arr = case arr of
+    MkArray s _ _ => let 0 prf = lteReflexive s in go s
+  where
+    go : (i : Nat) -> (0 prf : LTE i s) => b
+    go 0 = acc
+    go (S k) =
+      let 0 newprf = lteSuccLeft prf
+      in f (go k) k (readArray arr k)
+
+-- -- this isn't really foldl, it's foldr but just reading the array in reverse, this should
+-- -- be changed in the future so it's not surprising.
+-- export
+-- ifoldlArray : (b -> (i : Nat) -> a -> b) -> b -> Array s a -> b
+-- ifoldlArray f acc arr = case arr of
+--     MkArray s _ _ => let 0 prf = lteReflexive s in go s
+--   where
+--     go : (i : Nat) -> (0 prf : LTE i s) => b
+--     go 0 = acc
+--     go (S k) = let 0 p = lteSuccLeft prf in f (go k) (readArray arr k)
+
 -- bleh, see note above
 -- exported via Foldable
 %inline
@@ -322,6 +344,8 @@ Ord a => Ord (Array s a) where
 -- restriction since things like zipWith rediscovers what `s` was via pattern
 -- matching. We thus provide the operations below without an accompanying
 -- interface.
+--------------------------------------------------
+-- These interfaces are provided in Data.Strong.Array.Interfaces
 --------------------------------------------------
 
 ------------ Num ------------
@@ -488,8 +512,35 @@ export
 zipWith3 : (a -> b -> c -> d) -> Array s a -> Array s b -> Array s c -> Array s d
 zipWith3 f x y z = zipWithArray (\f',x' => f' x') (zipWithArray f x y) z
 
-unzipWith : Array s (a,b) -> (Array s a, Array s b)
-unzipWith x = ?fsefse -- bimap fromList fromList . unzip . Array.toList $ mapArray f x
+export
+unzipWith : (f : a -> (b, c)) -> Array s a -> (Array s b, Array s c)
+unzipWith f arr = case arr of
+    MkArray s _ _ =>
+      let new1 = newUnintializedArray s
+          new2 = newUnintializedArray s
+          () = ifoldlArray (\_,i,x' => unsafePerformIO $ do
+                 let (x,y) = f x'
+                 unsafeMutableWriteArray new1 i x
+                 unsafeMutableWriteArray new2 i y) () arr
+          in (new1,new2)
 
-unzipWith3 : Array s (a,b,c) -> (Array s a, Array s b, Array s c)
-unzipWith3 x = ?sdffssdfswefed
+export
+unzipWith3 : (func : a -> (b, c, d)) -> Array s a -> (Array s b, Array s c, Array s d)
+unzipWith3 f arr = case arr of
+    MkArray s _ _ =>
+      let new1 = newUnintializedArray s
+          new2 = newUnintializedArray s
+          new3 = newUnintializedArray s
+          () = ifoldlArray (\_,i,x' => unsafePerformIO $ do
+                 let (x,y,z) = f x'
+                 unsafeMutableWriteArray new1 i x
+                 unsafeMutableWriteArray new2 i y
+                 unsafeMutableWriteArray new3 i z) () arr
+          in (new1,new2,new3)
+
+export
+Zippable (Array s) where
+  zipWith = Array.zipWith
+  zipWith3 = Array.zipWith3
+  unzipWith = Array.unzipWith
+  unzipWith3 = Array.unzipWith3
