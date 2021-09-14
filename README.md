@@ -1,4 +1,4 @@
-Immutable Size Indexed Arrays
+Immutable Size-Indexed Arrays
 =====
 
 This package provides an immutable array type which tracks/enforces its length.

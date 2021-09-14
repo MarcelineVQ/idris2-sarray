@@ -1,10 +1,10 @@
 package sarray
-version     = 0.0.5.1
+version     = 0.0.6.1
 
 sourcedir   = "src"
 authors     = "\"MarcelineVQ\""
 license     = "CC0 (refer to LICENSE file)"
-brief       = "Immutable Size Indexed Arrays"
+brief       = "Immutable Size-Indexed Arrays"
 readme      = "README.md"
 homepage    = "https://github.com/MarcelineVQ/idris2-sarray"
 sourceloc   = "https://github.com/MarcelineVQ/idris2-sarray.git"
@@ -15,4 +15,4 @@ depends     = base
 modules     = Data.Strong.Array
             , Data.Strong.Array.Fusion
             , Data.Strong.Array.Interfaces
-            , Num.Floating
+            , Numeric.Floating

@@ -1,4 +1,4 @@
-module Num.Floating
+module Numeric.Floating
 
 public export
 interface Fractional ty => Floating ty where
