@@ -18,8 +18,6 @@ interface Fractional ty => Floating ty where
   cosh : ty -> ty
   tanh : ty -> ty
   sqrt : ty -> ty
-  floor : ty -> ty
-  ceiling : ty -> ty
 
 export
 Floating Double where
@@ -38,8 +36,6 @@ Floating Double where
   cosh = Prelude.Types.cosh
   tanh = Prelude.Types.tanh
   sqrt = Prelude.Types.sqrt
-  floor = Prelude.Types.floor
-  ceiling = Prelude.Types.ceiling
 
 -- export
 -- Floating Double where
