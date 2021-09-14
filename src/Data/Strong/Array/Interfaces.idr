@@ -1,7 +1,7 @@
 module Data.Strong.Array.Interfaces
 
 import Data.Strong.Array
-import Num.Floating
+import Numeric.Floating
 
 -- Separated interfaces due to needing `{s:_} ->` everywhere
 
@@ -51,5 +51,3 @@ export
   cosh = Array.cosh
   tanh = Array.tanh
   sqrt = Array.sqrt
-  floor = Array.floor
-  ceiling = Array.ceiling

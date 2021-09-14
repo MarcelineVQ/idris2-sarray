@@ -6,7 +6,7 @@ import Data.Nat
 import Control.Monad.Identity
 import Data.Zippable
 
-import public Num.Floating
+import public Numeric.Floating
 
 --------------------------------------------------
 
@@ -512,12 +512,12 @@ sqrt x = mapArray sqrt x
 
 export
 %inline
-floor : Floating a => Array s a -> Array s a
+floor : Array s Double -> Array s Double
 floor x = mapArray floor x
 
 export
 %inline
-ceiling : Floating a => Array s a -> Array s a
+ceiling : Array s Double -> Array s Double
 ceiling x = mapArray ceiling x
 
 
