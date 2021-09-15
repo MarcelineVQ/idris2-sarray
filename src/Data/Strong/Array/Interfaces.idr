@@ -1,7 +1,7 @@
 module Data.Strong.Array.Interfaces
 
 import Data.Strong.Array
-import Numeric.Floating
+import public Numeric.Floating
 
 -- Separated interfaces due to needing `{s:_} ->` everywhere
 

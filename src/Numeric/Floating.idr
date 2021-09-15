@@ -7,7 +7,7 @@ interface Fractional ty => Floating ty where
   euler : ty
   exp : ty -> ty
   log : ty -> ty
-  pow : ty -> ty -> ty
+  pow : ty -> ty -> ty -- (**)
   sin : ty -> ty
   cos : ty -> ty
   tan : ty -> ty

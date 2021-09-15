@@ -57,23 +57,25 @@ export
 newUnintializedArray' : {s : Nat} -> Array s a
 newUnintializedArray' = newUnintializedArray s
 
+
+copyFrom : ArrayData elem ->
+           ArrayData elem ->
+           Int -> Int -> IO ()
+copyFrom old new pos offset
+    = if pos < 0
+         then pure ()
+         else do el <- primIO $ prim__arrayGet old pos
+                 primIO $ prim__arraySet new (pos + offset) el
+                 copyFrom old new (assert_smaller pos (pos - 1)) offset
+
 export
 ||| You shouldn't need this yourself, other operations use this.
 newArrayCopy : Array s a -> Array s a
 newArrayCopy (MkArray s i contents) = unsafePerformIO $ do
     let new = newUnintializedArray s
-    copyFrom contents (content new) (i - 1)
+    copyFrom contents (content new) (i - 1) 0
     pure new
-  where
-    copyFrom : ArrayData elem ->
-               ArrayData elem ->
-               Int -> IO ()
-    copyFrom old new pos
-        = if pos < 0
-             then pure ()
-             else do el <- primIO $ prim__arrayGet old pos
-                     primIO $ prim__arraySet new pos el
-                     copyFrom old new $ assert_smaller pos (pos - 1)
+
 
 --------------------------------------------------
 
@@ -247,6 +249,14 @@ zipWithArray f arr1 arr2 = case arr1 of
           v2 = readArray arr2 k
           () = unsafePerformIO $ mutableWriteArray new k (f v1 v2)
       in  go new k
+
+export
+(++) : Array s1 a -> Array s2 a -> Array (s1 + s2) a
+MkArray s1 is1 cnt1 ++ MkArray s2 is2 cnt2 with (newUnintializedArray {a} (s1 + s2))
+  _ | new@(MkArray (s1 + s2) nis ncnt) = unsafePerformIO $ do
+    copyFrom cnt1 ncnt (is1 - 1) 0
+    copyFrom cnt2 ncnt (is2 - 1) is1
+    pure new
 
 export
 Functor (Array s) where
