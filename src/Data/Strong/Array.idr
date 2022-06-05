@@ -6,6 +6,8 @@ import Data.Nat
 import Control.Monad.Identity
 import Data.Zippable
 
+import Data.Vect
+
 import public Numeric.Floating
 
 --------------------------------------------------
@@ -171,7 +173,7 @@ imapArrayM g arr = case arr of
       let 0 newprf = lteSuccLeft prf
           v = readArray arr k
           r = g k v
-      in (\b => let () = unsafePerformIO $ mutableWriteArray new k b in id) <$> r <*> go new k
+      in (\b,arr => unsafePerformIO $ (mutableWriteArray new k b *> pure arr)) <$> r <*> go new k
 
 export
 %inline
@@ -272,7 +274,15 @@ export
 toList : Array s a -> List a
 toList xs = foldlArray (\b,a => b . (a ::)) id xs []
 
--- TODO: toVect, to delistify while preserving size
+export
+toVect : Array s a -> Vect s a
+toVect arr = case arr of
+    (MkArray s _ _) => let 0 prf = lteReflexive s in go s
+  where
+    go : (n : Nat) -> (0 prf : LTE n s) => Vect n a
+    go Z = []
+    go (S k) = let 0 newprf = lteSuccLeft prf
+               in  readArray arr k :: go k
 
 export
 fromList : (xs : List a) -> Array (length xs) a
@@ -296,11 +306,28 @@ fromList' xs =
   where -- this used mutableWriteArray to prove
     go : Array s a -> (xs : List a) -> (i : Nat) -> Array s a
     go new (x :: xs) k =
-      let () = unsafePerformIO $ unsafeMutableWriteArray new k x
-      in  go new xs (S k)
+      unsafePerformIO $ unsafeMutableWriteArray new k x *> pure (go new xs (S k))
     go new _ _ = new
 
--- TODO: fromVect, to listify while preserving size
+export
+fromVect : {n : _} -> (xs : Vect n a) -> Array n a
+fromVect xs = let new = newUnintializedArray {a} n in go n (reverse xs) new
+  where
+    go : forall n. (p : Nat) -> Vect p a -> Array n a -> Array n a
+    go Z [] arr = arr
+    go (S k) (x :: ys) arr = go k ys (unsafeWriteArray arr k x)
+
+-- this is kind of a pain in the ass with the rewrites and double length
+export
+fromVect' : (xs : Vect n a) -> Array n a
+fromVect' xs = let new = newUnintializedArray {a} (length xs)
+               in rewrite sym (lengthCorrect xs)
+               in go (length xs) (rewrite lengthCorrect xs in xs) new
+  where
+    go : forall n. (p : Nat) -> Vect p a -> Array n a -> Array n a
+    go Z [] arr = arr
+    go (S k) (x :: ys) arr = let () = unsafePerformIO $ unsafeMutableWriteArray arr k x
+                             in go k ys arr
 
 export
 Show a => Show (Array s a) where
