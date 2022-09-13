@@ -156,9 +156,7 @@ imapArrayM' f arr = case arr of
       let 0 newprf = lteSuccLeft prf
       let v = readArray arr k
       r <- f k v
-      -- let () = unsafePerformIO $ mutableWriteArray new k r
       unsafePerformIO $ mutableWriteArray new k r *> pure (go new k)
-      -- go new k
 
 export
 imapArrayM : Applicative f => ((i : Nat) -> a -> f b) -> Array s a -> f (Array s b)
@@ -338,9 +336,13 @@ sumArray : Num a => Array s a -> a
 sumArray = foldlArray (+) 0
 
 -- The quintessential example for where you'd want fusion, but we don't have it yet.
+-- export
+-- dotArray : Num a => Array s a -> Array s a -> a
+-- dotArray a b = sumArray (zipWithArray (*) a b)
+
 export
 dotArray : Num a => Array s a -> Array s a -> a
-dotArray a b = sumArray (zipWithArray (*) a b)
+dotArray arr1 arr2 = ifoldlArray (\acc,ix,v => acc + v * unsafeReadArray arr2 ix) 0 arr1
 
 ------------ Foldable ------------
 
@@ -408,6 +410,8 @@ Ord a => Ord (Array s a) where
 --------------------------------------------------
 
 ------------ Num ------------
+
+-- TODO: Missing scalar operations
 
 export
 %inline

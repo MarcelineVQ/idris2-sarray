@@ -1,5 +1,5 @@
 package sarray
-version     = 0.0.8.2
+version     = 0.0.8.5
 
 sourcedir   = "src"
 authors     = "MarcelineVQ"
