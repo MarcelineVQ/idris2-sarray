@@ -137,7 +137,7 @@ readArray arr i = unsafeReadArray arr i
 
 export
 ||| Same caveat as writeArray
-modifyArray : (a -> a) -> Array s a -> (i : Nat) -> LTE i s => Array s a
+modifyArray : (a -> a) -> Array s a -> (i : Nat) -> (0 prf : LTE i s) => Array s a
 modifyArray f arr i = writeArray arr i (f (readArray arr i))
 
 -- Keeping this around for now, Applicative version does the same job, but I'm
@@ -156,8 +156,9 @@ imapArrayM' f arr = case arr of
       let 0 newprf = lteSuccLeft prf
       let v = readArray arr k
       r <- f k v
-      let () = unsafePerformIO $ mutableWriteArray new k r
-      go new k
+      -- let () = unsafePerformIO $ mutableWriteArray new k r
+      unsafePerformIO $ mutableWriteArray new k r *> pure (go new k)
+      -- go new k
 
 export
 imapArrayM : Applicative f => ((i : Nat) -> a -> f b) -> Array s a -> f (Array s b)
@@ -193,6 +194,7 @@ inewArrayFill s g = runIdentity $ imapArrayM (\i,_ => Id (g i)) (newUnintialized
 
 -- this isn't really foldl, it's foldr but just reading the array in reverse, this should
 -- be changed in the future so it's not surprising.
+export
 ifoldlArray : (b -> (i : Nat) -> a -> b) -> b -> Array s a -> b
 ifoldlArray f acc arr = case arr of
     MkArray s _ _ => let 0 prf = lteReflexive s in go s
@@ -249,8 +251,7 @@ zipWithArray f arr1 arr2 = case arr1 of
       let 0 newprf = lteSuccLeft prf
           v1 = readArray arr1 k
           v2 = readArray arr2 k
-          () = unsafePerformIO $ mutableWriteArray new k (f v1 v2)
-      in  go new k
+      in unsafePerformIO $ mutableWriteArray new k (f v1 v2) *> pure (go new k)
 
 export
 (++) : Array s1 a -> Array s2 a -> Array (s1 + s2) a
@@ -293,8 +294,7 @@ fromList xs with (length xs)
   where -- this used mutableWriteArray to prove
     go : Array s a -> (xs : List a) -> (i : Nat) -> Array s a
     go new (x :: xs) k =
-      let () = unsafePerformIO $ unsafeMutableWriteArray new k x
-      in  go new xs (S k)
+      unsafePerformIO $ unsafeMutableWriteArray new k x *> pure (go new xs (S k))
     go new _ _ = new
 
 export

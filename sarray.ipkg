@@ -1,8 +1,8 @@
 package sarray
-version     = 0.0.7.2
+version     = 0.0.8.2
 
 sourcedir   = "src"
-authors     = "\"MarcelineVQ\""
+authors     = "MarcelineVQ"
 license     = "CC0 (refer to LICENSE file)"
 brief       = "Immutable Size-Indexed Arrays"
 readme      = "README.md"
@@ -10,9 +10,11 @@ homepage    = "https://github.com/MarcelineVQ/idris2-sarray"
 sourceloc   = "https://github.com/MarcelineVQ/idris2-sarray.git"
 bugtracker  = "https://github.com/MarcelineVQ/idris2-sarray/issues"
 
-depends     = base
+depends     = base, contrib, linear
 
 modules     = Data.Strong.Array
             , Data.Strong.Array.Fusion
             , Data.Strong.Array.Interfaces
             , Numeric.Floating
+
+-- main = Data.Strong.Tensor
